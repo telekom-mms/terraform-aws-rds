@@ -3,11 +3,11 @@
 
 # DB Subnet Group
 resource "aws_db_subnet_group" "this" {
-  name       = "${var.name_prefix}-db-subnet-group"
+  name       = "${local.name_prefix}-db-subnet-group"
   subnet_ids = var.subnet_ids
 
-  tags = merge(var.tags, {
-    "Name"          = "${var.name_prefix}-db-subnet-group"
+  tags = merge(local.common_tags, {
+    "Name"          = "${local.name_prefix}-db-subnet-group"
     "PSA-Compliant" = "true"
   })
 }
@@ -16,7 +16,7 @@ resource "aws_db_subnet_group" "this" {
 resource "aws_db_parameter_group" "this" {
   count  = var.create_parameter_group && !var.create_aurora_cluster ? 1 : 0
   family = var.parameter_group_family
-  name   = "${var.name_prefix}-db-params"
+  name   = "${local.name_prefix}-db-params"
 
   # Security-focused parameters
   dynamic "parameter" {
@@ -27,8 +27,8 @@ resource "aws_db_parameter_group" "this" {
     }
   }
 
-  tags = merge(var.tags, {
-    "Name"          = "${var.name_prefix}-db-params"
+  tags = merge(local.common_tags, {
+    "Name"          = "${local.name_prefix}-db-params"
     "PSA-Compliant" = "true"
   })
 }
@@ -37,10 +37,10 @@ resource "aws_db_parameter_group" "this" {
 resource "aws_rds_cluster_parameter_group" "this" {
   count  = var.create_parameter_group && var.create_aurora_cluster ? 1 : 0
   family = var.parameter_group_family
-  name   = "${var.name_prefix}-cluster-params"
+  name   = "${local.name_prefix}-cluster-params"
 
-  tags = merge(var.tags, {
-    "Name"          = "${var.name_prefix}-cluster-params"
+  tags = merge(local.common_tags, {
+    "Name"          = "${local.name_prefix}-cluster-params"
     "PSA-Compliant" = "true"
   })
 }
@@ -48,7 +48,7 @@ resource "aws_rds_cluster_parameter_group" "this" {
 # KMS Key for RDS Encryption
 resource "aws_kms_key" "rds" {
   count       = var.create_kms_key ? 1 : 0
-  description = "KMS key for RDS encryption - ${var.name_prefix}"
+  description = "KMS key for RDS encryption - ${local.name_prefix}"
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -78,8 +78,8 @@ resource "aws_kms_key" "rds" {
     ]
   })
 
-  tags = merge(var.tags, {
-    "Name"          = "${var.name_prefix}-rds-kms-key"
+  tags = merge(local.common_tags, {
+    "Name"          = "${local.name_prefix}-rds-kms-key"
     "Purpose"       = "RDS Encryption"
     "PSA-Compliant" = "true"
   })
@@ -87,7 +87,7 @@ resource "aws_kms_key" "rds" {
 
 resource "aws_kms_alias" "rds" {
   count         = var.create_kms_key ? 1 : 0
-  name          = "alias/${var.name_prefix}-rds"
+  name          = "alias/${local.name_prefix}-rds"
   target_key_id = aws_kms_key.rds[0].key_id
 }
 
@@ -95,7 +95,7 @@ resource "aws_kms_alias" "rds" {
 resource "aws_db_instance" "this" {
   count = var.create_aurora_cluster ? 0 : 1
 
-  identifier = "${var.name_prefix}-rds"
+  identifier = "${local.name_prefix}-rds"
 
   engine                = var.engine
   engine_version        = var.engine_version
@@ -104,8 +104,8 @@ resource "aws_db_instance" "this" {
   max_allocated_storage = var.max_allocated_storage
   storage_type          = var.storage_type
 
-  storage_encrypted = true
-  kms_key_id        = var.create_kms_key ? aws_kms_key.rds[0].arn : var.kms_key_id
+  storage_encrypted = true                                                         # PSA Compliance: Req 5 (database encryption)
+  kms_key_id        = var.create_kms_key ? aws_kms_key.rds[0].arn : var.kms_key_id # PSA Compliance: Req 5 (database encryption)
 
   db_name  = var.database_name
   username = var.master_username
@@ -118,13 +118,13 @@ resource "aws_db_instance" "this" {
 
   parameter_group_name = var.create_parameter_group ? aws_db_parameter_group.this[0].name : var.parameter_group_name
 
-  backup_retention_period  = var.backup_retention_period
-  backup_window            = var.backup_window
+  backup_retention_period  = var.backup_retention_period # PSA Compliance: Req 5 (database backup)
+  backup_window            = var.backup_window           # PSA Compliance: Req 5 (database backup)
   maintenance_window       = var.maintenance_window
   copy_tags_to_snapshot    = true
   delete_automated_backups = var.delete_automated_backups
 
-  final_snapshot_identifier = "${var.name_prefix}-rds-final-snapshot"
+  final_snapshot_identifier = "${local.name_prefix}-rds-final-snapshot"
   skip_final_snapshot       = var.skip_final_snapshot
 
   monitoring_interval             = var.enable_enhanced_monitoring ? 60 : 0
@@ -139,8 +139,8 @@ resource "aws_db_instance" "this" {
 
   multi_az = var.multi_az
 
-  tags = merge(var.tags, {
-    "Name"          = "${var.name_prefix}-rds"
+  tags = merge(local.common_tags, {
+    "Name"          = "${local.name_prefix}-rds"
     "PSA-Compliant" = "true"
   })
 }
@@ -150,20 +150,20 @@ resource "aws_db_instance" "this" {
 resource "aws_rds_cluster" "this" {
   count = var.create_aurora_cluster ? 1 : 0
 
-  cluster_identifier      = "${var.name_prefix}-cluster"
+  cluster_identifier      = "${local.name_prefix}-cluster"
   engine                  = var.engine
   engine_version          = var.engine_version
   database_name           = var.database_name
   master_username         = var.master_username
   master_password         = var.master_password
-  backup_retention_period = var.backup_retention_period
-  preferred_backup_window = var.backup_window
+  backup_retention_period = var.backup_retention_period # PSA Compliance: Req 5 (database backup)
+  preferred_backup_window = var.backup_window           # PSA Compliance: Req 5 (database backup)
 
   db_subnet_group_name   = aws_db_subnet_group.this.name
   vpc_security_group_ids = var.security_group_ids
 
-  storage_encrypted = true
-  kms_key_id        = var.create_kms_key ? aws_kms_key.rds[0].arn : var.kms_key_id
+  storage_encrypted = true                                                         # PSA Compliance: Req 5 (database encryption)
+  kms_key_id        = var.create_kms_key ? aws_kms_key.rds[0].arn : var.kms_key_id # PSA Compliance: Req 5 (database encryption)
 
   db_cluster_parameter_group_name = var.create_parameter_group ? aws_rds_cluster_parameter_group.this[0].name : null
 
@@ -179,8 +179,8 @@ resource "aws_rds_cluster" "this" {
     }
   }
 
-  tags = merge(var.tags, {
-    "Name"          = "${var.name_prefix}-cluster"
+  tags = merge(local.common_tags, {
+    "Name"          = "${local.name_prefix}-cluster"
     "PSA-Compliant" = "true"
   })
 }
@@ -188,7 +188,7 @@ resource "aws_rds_cluster" "this" {
 resource "aws_rds_cluster_instance" "this" {
   count = var.create_aurora_cluster ? var.aurora_instance_count : 0
 
-  identifier         = "${var.name_prefix}-instance-${count.index}"
+  identifier         = "${local.name_prefix}-instance-${count.index}"
   cluster_identifier = aws_rds_cluster.this[0].id
   instance_class     = var.instance_class
   engine             = aws_rds_cluster.this[0].engine
@@ -201,8 +201,8 @@ resource "aws_rds_cluster_instance" "this" {
   monitoring_interval          = var.enable_enhanced_monitoring ? 60 : 0
   monitoring_role_arn          = var.enable_enhanced_monitoring ? var.monitoring_role_arn : null
 
-  tags = merge(var.tags, {
-    "Name"          = "${var.name_prefix}-instance-${count.index}"
+  tags = merge(local.common_tags, {
+    "Name"          = "${local.name_prefix}-instance-${count.index}"
     "PSA-Compliant" = "true"
   })
 }
@@ -212,7 +212,7 @@ resource "aws_rds_cluster_instance" "this" {
 resource "aws_db_proxy" "this" {
   count = var.create_db_proxy ? 1 : 0
 
-  name                   = "${var.name_prefix}-proxy"
+  name                   = "${local.name_prefix}-proxy"
   debug_logging          = false
   engine_family          = var.engine == "postgres" ? "POSTGRESQL" : "MYSQL"
   idle_client_timeout    = 1800
@@ -231,8 +231,8 @@ resource "aws_db_proxy" "this" {
     }
   }
 
-  tags = merge(var.tags, {
-    "Name"          = "${var.name_prefix}-proxy"
+  tags = merge(local.common_tags, {
+    "Name"          = "${local.name_prefix}-proxy"
     "PSA-Compliant" = "true"
   })
 }

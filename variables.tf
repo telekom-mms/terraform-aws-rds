@@ -69,6 +69,17 @@ variable "master_username" {
   description = "Username for the master DB user"
   type        = string
   default     = "dbadmin" # PSA Req 7: Avoid default names like 'admin' or 'postgres'
+
+  validation {
+    condition = can(regex("^[A-Za-z][A-Za-z0-9_]{0,15}$", var.master_username)) && !contains([
+      "admin",
+      "administrator",
+      "master",
+      "postgres",
+      "root"
+    ], lower(var.master_username))
+    error_message = "master_username must start with a letter, be 1-16 characters using only letters, numbers, and underscores, and must not use reserved generic admin usernames."
+  }
 }
 
 variable "master_password" {

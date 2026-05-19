@@ -44,3 +44,25 @@ output "kms_key_arn" {
   description = "The ARN of the KMS key used for encryption"
   value       = var.create_kms_key ? aws_kms_key.rds[0].arn : var.kms_key_id
 }
+
+output "db_subnet_group_name" {
+  description = "The name of the DB subnet group"
+  value       = aws_db_subnet_group.this.name
+}
+
+output "parameter_group_name" {
+  description = "The name of the active parameter group"
+  value = var.create_parameter_group ? (
+    var.create_aurora_cluster ? aws_rds_cluster_parameter_group.this[0].name : aws_db_parameter_group.this[0].name
+  ) : var.parameter_group_name
+}
+
+output "monitoring_role_arn" {
+  description = "The IAM role ARN used for enhanced monitoring"
+  value       = var.enable_enhanced_monitoring ? var.monitoring_role_arn : null
+}
+
+output "instance_identifier" {
+  description = "The primary database instance identifier"
+  value       = try(aws_db_instance.this[0].identifier, try(aws_rds_cluster_instance.this[0].identifier, null))
+}
