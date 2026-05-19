@@ -171,9 +171,9 @@ variable "enable_performance_insights" {
 }
 
 variable "enable_enhanced_monitoring" {
-  description = "Interval, in seconds, between points when Enhanced Monitoring metrics are collected for the DB instance"
+  description = "Specifies whether Enhanced Monitoring is enabled"
   type        = bool
-  default     = true
+  default     = false
 }
 
 variable "monitoring_role_arn" {
@@ -305,6 +305,12 @@ variable "create_db_proxy" {
   description = "Whether to create an RDS Proxy"
   type        = bool
   default     = false
+}
+
+variable "db_proxy_role_arn" {
+  description = "ARN of the IAM role for RDS Proxy to access Secrets Manager"
+  type        = string
+  default     = ""
 }
 
 variable "db_proxy_auth" {

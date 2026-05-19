@@ -20,7 +20,10 @@ resource "aws_db_parameter_group" "this" {
 
   # Security-focused parameters
   dynamic "parameter" {
-    for_each = var.engine == "postgres" ? var.postgres_security_parameters : (var.engine == "mysql" || var.engine == "mariadb" ? var.mysql_security_parameters : [])
+    for_each = concat(
+      var.engine == "postgres" ? var.postgres_security_parameters : (var.engine == "mysql" || var.engine == "mariadb" ? var.mysql_security_parameters : []),
+      var.custom_parameters
+    )
     content {
       name  = parameter.value.name
       value = parameter.value.value
@@ -38,6 +41,17 @@ resource "aws_rds_cluster_parameter_group" "this" {
   count  = var.create_parameter_group && var.create_aurora_cluster ? 1 : 0
   family = var.parameter_group_family
   name   = "${local.name_prefix}-cluster-params"
+
+  dynamic "parameter" {
+    for_each = concat(
+      var.engine == "postgres" ? var.postgres_security_parameters : (var.engine == "mysql" || var.engine == "mariadb" ? var.mysql_security_parameters : []),
+      var.custom_parameters
+    )
+    content {
+      name  = parameter.value.name
+      value = parameter.value.value
+    }
+  }
 
   tags = merge(local.common_tags, {
     "Name"          = "${local.name_prefix}-cluster-params"
@@ -143,6 +157,14 @@ resource "aws_db_instance" "this" {
     "Name"          = "${local.name_prefix}-rds"
     "PSA-Compliant" = "true"
   })
+
+  lifecycle {
+    precondition {
+      # If enhanced monitoring is enabled, monitoring_role_arn must be provided
+      condition     = !var.enable_enhanced_monitoring || trimspace(var.monitoring_role_arn) != ""
+      error_message = "monitoring_role_arn must be provided when enable_enhanced_monitoring is true."
+    }
+  }
 }
 
 # --- AURORA CLUSTER ---
@@ -205,6 +227,14 @@ resource "aws_rds_cluster_instance" "this" {
     "Name"          = "${local.name_prefix}-instance-${count.index}"
     "PSA-Compliant" = "true"
   })
+
+  lifecycle {
+    precondition {
+      # If enhanced monitoring is enabled, monitoring_role_arn must be provided
+      condition     = !var.enable_enhanced_monitoring || trimspace(var.monitoring_role_arn) != ""
+      error_message = "monitoring_role_arn must be provided when enable_enhanced_monitoring is true."
+    }
+  }
 }
 
 # --- DB PROXY ---
@@ -217,7 +247,7 @@ resource "aws_db_proxy" "this" {
   engine_family          = var.engine == "postgres" ? "POSTGRESQL" : "MYSQL"
   idle_client_timeout    = 1800
   require_tls            = true
-  role_arn               = var.monitoring_role_arn # Needs specific proxy role in real use
+  role_arn               = var.db_proxy_role_arn
   vpc_security_group_ids = var.security_group_ids
   vpc_subnet_ids         = var.subnet_ids
 
@@ -235,6 +265,13 @@ resource "aws_db_proxy" "this" {
     "Name"          = "${local.name_prefix}-proxy"
     "PSA-Compliant" = "true"
   })
+
+  lifecycle {
+    precondition {
+      condition     = var.db_proxy_role_arn != ""
+      error_message = "db_proxy_role_arn is required when create_db_proxy is true."
+    }
+  }
 }
 
 resource "aws_db_proxy_default_target_group" "this" {
