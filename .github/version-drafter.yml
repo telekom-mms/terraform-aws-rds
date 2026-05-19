@@ -1,0 +1,17 @@
+
+---
+name: update-changelog
+
+on:
+  pull_request:
+    types: [closed]
+
+env:
+  TEMPLATE_REPOSITORY: telekom-mms/terraform-template
+
+jobs:
+  call-update-changelog:
+    if: github.repository != '$TEMPLATE_REPOSITORY'
+    uses: telekom-mms/.github/.github/workflows/update-changelog.yml@main
+    secrets:
+      token: ${{ secrets.GITHUB_TOKEN }}

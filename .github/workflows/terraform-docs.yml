@@ -1,0 +1,15 @@
+
+---
+name: terraform-docs
+
+on:
+  push:
+    branches: [main]
+
+env:
+  TEMPLATE_REPOSITORY: telekom-mms/terraform-template
+
+jobs:
+  call-terraform-docs:
+    if: github.repository != '$TEMPLATE_REPOSITORY'
+    uses: telekom-mms/.github/.github/workflows/terraform-docs.yml@main

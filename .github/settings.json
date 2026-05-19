@@ -1,0 +1,13 @@
+
+{
+  "repos": {
+    "description": "A Terraform module that manages the aws rds resources from the aws provider.",
+    "visibility": "public",
+    "default_branch": "main",
+    "homepage": "https://telekom-mms.github.io/terraform-template",
+    "topics": [
+      "terraform",
+      "aws"
+    ]
+  }
+}
