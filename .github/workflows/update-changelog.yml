@@ -12,6 +12,6 @@ env:
 jobs:
   call-update-changelog:
     if: github.repository != '$TEMPLATE_REPOSITORY'
-    uses: telekom-mms/.github/.github/workflows/update-changelog.yml@main
+    uses: telekom-mms/.github/.github/workflows/update-changelog.yml@7c33098554c9aa6cd573cb3696ee59ce5d9691df # main
     secrets:
       token: ${{ secrets.GITHUB_TOKEN }}
