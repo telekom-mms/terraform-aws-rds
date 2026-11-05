@@ -12,4 +12,4 @@ env:
 jobs:
   call-terraform-docs:
     if: github.repository != '$TEMPLATE_REPOSITORY'
-    uses: telekom-mms/.github/.github/workflows/terraform-docs.yml@main
+    uses: telekom-mms/.github/.github/workflows/terraform-docs.yml@e522992936bc369f4baa7634ba96846fca5fda97 # main
