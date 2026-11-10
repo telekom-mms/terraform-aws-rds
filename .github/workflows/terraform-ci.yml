@@ -12,6 +12,6 @@ env:
 jobs:
   call-terraform-ci:
     if: github.repository != '$TEMPLATE_REPOSITORY'
-    uses: telekom-mms/.github/.github/workflows/terraform-ci.yml@main
+    uses: telekom-mms/.github/.github/workflows/terraform-ci.yml@4e8c2a36c92a3a3e52c836130127f81e7baee325 # main
     with:
       working-directory: examples/basic-rds
